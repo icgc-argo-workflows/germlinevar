@@ -127,6 +127,17 @@ def get_files_info(file_to_upload, date_str, analysis_dict, process_indicator,to
                 file_info['info'].update({'analysis_tools': [{key.split(":")[-1]:pipeline_info[key]} for key in pipeline_info.keys()]})
             else:
                 sys.exit('Error: unknown QC metrics file: %s' % file_to_upload)
+        elif tool=="mpileup":
+            if re.match(r'.*.vcf.gz$', file_to_upload):
+                file_type = 'VCF'
+                file_info.update({'dataType': 'Raw %s Calls' % data_type})
+                file_info['info'].update({'analysis_tools': [{key.split(":")[-1]:pipeline_info[key]} for key in pipeline_info.keys()]})
+            elif re.match(r'.*.vcf.gz.tbi$', file_to_upload):
+                file_type = 'TBI'
+                file_info.update({'dataType': 'VCF Index'})
+                file_info['info'].update({'analysis_tools': [{key.split(":")[-1]:pipeline_info[key]} for key in pipeline_info.keys()]})
+            else:
+                sys.exit('Error: unknown QC metrics file: %s' % file_to_upload)
         elif tool=="cnvkit":
             if re.match(r'.*.vcf.gz$', file_to_upload):
                 file_type = 'VCF'
@@ -245,7 +256,7 @@ def main():
     parser.add_argument("-p", "--pipeline_yml", dest="pipeline_yml", required=False, help="Pipeline info in yaml")
     parser.add_argument("-l", "--tarball", dest="tarball", required=True,default="false", help="Tarball files")
     parser.add_argument("-t", "--tool", dest="tool", required=True,type=str, help="Tool used for variant calling",
-    choices=['strelka','cnvkit','deepvariant','tiddit','manta','haplotypecaller','freebayes'])
+    choices=['strelka','cnvkit','deepvariant','tiddit','manta','haplotypecaller','freebayes','mpileup'])
     parser.add_argument("-d", "--data-type", dest="data_type", required=True,type=str, help="Data type for upload",choices=['InDel',"SNV","CNV"])
 
     args = parser.parse_args()

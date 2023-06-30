@@ -184,7 +184,7 @@ workflow GERMLINE_VARIANT_DEEPVARIANT {
     //Gather temporary files
     ch_cleanup=DEEPVARIANT.out.vcf.map{meta,vcf -> [vcf]}
     .mix(MERGE_DEEPVARIANT_VCF.out.vcf.map{meta,vcf -> [vcf]})
-    .mix(TABIX_VC_DEEPVARIANT_VCF.out.tbi.map{meta,vcf -> [tbi]})
+    .mix(TABIX_VC_DEEPVARIANT_VCF.out.tbi.map{meta,tbi -> [tbi]})
     .mix(SELECT_VCF_INDEL.out.vcf.map{meta,vcf -> [vcf]})
     .mix(SELECT_VCF_SNV.out.vcf.map{meta,vcf -> [vcf]})
     .mix(PAYLOAD_VCF_INDEL_GERMLINEVARIANT.out.payload_files.map{meta,analysis,files -> [analysis]})

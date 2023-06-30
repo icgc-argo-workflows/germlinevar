@@ -9,20 +9,21 @@ include { GERMLINE_VARIANT_MANTA                                        } from '
 include { GERMLINE_VARIANT_CNVKIT                                       } from '../germline_variant_cnvkit/main'
 include { GERMLINE_VARIANT_FREEBAYES                                    } from '../germline_variant_freebayes/main'
 include { GERMLINE_VARIANT_GATK_HAPLOTYPECALLER                         } from '../germline_variant_gatk_haplotypecaller/main'
+include { GERMLINE_VARIANT_MPILEUP                                      } from '../germline_variant_mpileup/main'
 include { PREPARE_INTERVALS                                             } from '../prepare_intervals/main'
 include { BUILD_INTERVALS                                               } from '../../../modules/local/build_intervals/main'
 include { CLEANUP                                                       } from '../../../modules/icgc-argo-workflows/cleanup/main'
 
 fasta                = params.fasta                ? Channel.fromPath(params.fasta).collect()                              : Channel.empty()
 fasta_fai            = params.fasta_fai            ? Channel.fromPath(params.fasta_fai).collect()                          : Channel.empty()
-germline_resource    = params.germline_resource    ? Channel.fromPath(params.germline_resource).collect()                  : Channel.value([]) //Mutec2 does not require a germline resource, so set to optional input
+//germline_resource    = params.germline_resource    ? Channel.fromPath(params.germline_resource).collect()                  : Channel.value([]) //Mutec2 does not require a germline resource, so set to optional input
 known_indels         = params.known_indels         ? Channel.fromPath(params.known_indels).collect()                       : Channel.empty()
 known_indels_tbi     = params.known_indels_tbi     ? Channel.fromPath(params.known_indels_tbi).collect()                   : Channel.empty()
 known_snps           = params.known_snps           ? Channel.fromPath(params.known_snps).collect()                         : Channel.empty()
 known_snps_tbi       = params.known_snps_tbi       ? Channel.fromPath(params.known_snps_tbi).collect()                     : Channel.empty()
 dbsnp                = params.dbsnp                ? Channel.fromPath(params.dbsnp).collect()                              : Channel.empty()
 dbsnp_tbi            = params.dbsnp_tbi            ? Channel.fromPath(params.dbsnp_tbi).collect()                          : Channel.empty()
-dragstr_model        = params.dragstr_model        ? Channel.fromPath(params.dragstr_model).collect()                      : Channel.empty()
+//dragstr_model        = params.dragstr_model        ? Channel.fromPath(params.dragstr_model).collect()                      : Channel.empty()
 dict                 = params.dict                 ? Channel.fromPath(params.dict).collect()                               : Channel.empty()
 bwa                  = params.bwa                  ? Channel.fromPath(params.bwa).collect()                                : Channel.value([])
 wes                  = params.wes                  ? params.wes                                                            : false
@@ -307,6 +308,34 @@ workflow GERMLINE_VARIANTS {
         )
 
         cumulative_versions=cumulative_versions.mix(GERMLINE_VARIANT_FREEBAYES.out.versions)
+    }
+
+    //MPILEUP N
+    if (params.tools.split(',').contains('mpileup')){
+        ch_normal_mpileup = ch_cram_variant_calling_normal.combine(intervals_bed)
+            .map{ meta, cram, crai, intervals_bed,num_intervals ->
+                [
+                    [
+                        id : meta.id,
+                        experimentalStrategy : meta.experimentalStrategy,
+                        genomeBuild : meta.genomeBuild,
+                        tumourNormalDesignation : meta.tumourNormalDesignation,
+                        sampleType : meta.sampleType ,
+                        gender : meta.gender,
+                        num_intervals : num_intervals
+                ], 
+                cram, intervals_bed]
+        }
+    
+        GERMLINE_VARIANT_MPILEUP(
+            ch_normal_mpileup,
+            fasta,
+            dict,
+            NORMAL_SONG_SCORE_DOWNLOAD.out.analysis_json,
+            ch_versions
+        )
+
+        cumulative_versions=cumulative_versions.mix(GERMLINE_VARIANT_MPILEUP.out.versions)
     }
 
     // Recal CRAM clean up
